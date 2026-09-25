@@ -1,0 +1,4 @@
+node_modules/
+dist/
+public/globe.json
+.DS_Store

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Day and Night Earth</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='%230b1320'/><path d='M16 3a13 13 0 0 1 0 26z' fill='%23f4c46b'/></svg>" />
+    <link rel="stylesheet" href="/src/day-night/style.css" />
+  </head>
+  <body>
+    <div id="globe" aria-label="Earth with the current day and night regions"></div>
+
+    <header class="hud">
+      <nav class="pages" aria-label="Pages">
+        <a href="/">Job globe</a>
+        <a href="/day-night.html" aria-current="page">Day &amp; night</a>
+      </nav>
+      <h1>Day &amp; Night Earth</h1>
+      <p class="sub">Sunlight calculated from the sun's position. The ISS is computed from its orbit.</p>
+    </header>
+
+    <aside class="iss-card" id="iss-card" aria-live="polite">
+      <div class="iss-head"><span class="iss-dot"></span>ISS</div>
+      <dl id="iss-stats">
+        <div><dt>Latitude</dt><dd id="iss-lat">–</dd></div>
+        <div><dt>Longitude</dt><dd id="iss-lng">–</dd></div>
+        <div><dt>Altitude</dt><dd id="iss-alt">–</dd></div>
+        <div><dt>Speed</dt><dd id="iss-speed">–</dd></div>
+      </dl>
+      <p class="iss-note" id="iss-note">Loading orbit…</p>
+      <button class="follow" id="iss-follow" type="button" aria-pressed="false">Follow ISS</button>
+    </aside>
+
+    <section class="time" aria-label="Time controls">
+      <div class="clock">
+        <span class="badge" id="badge">LIVE</span>
+        <span class="utc" id="utc">–</span>
+        <span class="local" id="local">–</span>
+      </div>
+      <div class="controls">
+        <button class="play" id="play" type="button" aria-label="Pause">❚❚</button>
+        <div class="speeds" role="group" aria-label="Speed">
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="60" aria-pressed="false">60×</button>
+          <button type="button" data-speed="1000" aria-pressed="false">1000×</button>
+        </div>
+        <button class="now" id="now" type="button">Now</button>
+      </div>
+      <label class="scrub">
+        <span class="scrub-edge">−24h</span>
+        <input id="slider" type="range" min="-1440" max="1440" step="1" value="0" aria-label="Offset from now, in minutes" />
+        <span class="scrub-edge">+24h</span>
+      </label>
+      <div class="offset" id="offset">now</div>
+    </section>
+
+    <script type="module" src="/src/day-night/main.ts"></script>
+  </body>
+</html>

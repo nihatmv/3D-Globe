@@ -1,0 +1,282 @@
+/* The globe sits in space, so the page is dark-only by design. Point colors
+   are categorical slots 1-2 of the dataviz reference palette, dark steps,
+   validated against --space (CVD ΔE 26.8, both ≥ 3:1). */
+:root {
+  color-scheme: dark;
+  --space: #05070b;
+  --surface: rgba(14, 17, 24, 0.9);
+  --surface-solid: #0e1118;
+  --surface-raised: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.09);
+  --text-primary: #f4f5f7;
+  --text-secondary: #b4b8c2;
+  --text-muted: #7d828e;
+  --stated: #3987e5;
+  --inferred: #d95926;
+  --accent: #8fc1ff;
+  --radius: 14px;
+  --gutter: 16px;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--space);
+  color: var(--text-primary);
+}
+
+#globe { position: fixed; inset: 0; }
+
+.hud, .legend, .panel, .status {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  /* No backdrop-filter: blurring a live WebGL canvas re-runs every frame
+     behind every panel. A near-opaque surface reads the same. */
+}
+
+/* ---- header ---------------------------------------------------------- */
+.hud {
+  top: var(--gutter);
+  left: var(--gutter);
+  max-width: min(420px, calc(100vw - 2 * var(--gutter)));
+  padding: 18px 20px;
+}
+.pages { display: flex; gap: 4px; font-size: 12px; margin-bottom: 10px; }
+.pages a {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.pages a:hover { color: var(--text-primary); border-color: var(--border); }
+.pages a[aria-current="page"] { color: var(--text-primary); background: var(--surface-raised); border-color: var(--border); }
+
+.hud h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.sub { margin: 4px 0 14px; font-size: 13px; color: var(--text-secondary); }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 4px 18px;
+  margin: 0 0 14px;
+}
+.stats div { display: flex; flex-direction: column-reverse; }
+.stats dt { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.stats dd { margin: 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.top { display: flex; flex-direction: column; gap: 6px; }
+.top-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+#top-cities { display: flex; flex-wrap: wrap; gap: 6px; }
+#top-cities button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+#top-cities button:hover, #top-cities button:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  outline: none;
+}
+#top-cities b { font-weight: 600; color: var(--text-primary); margin-left: 4px; }
+
+/* ---- legend ---------------------------------------------------------- */
+.legend {
+  left: var(--gutter);
+  bottom: var(--gutter);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 6px;
+}
+.legend-note { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -1px;
+}
+.dot-text { background: var(--stated); }
+.dot-inferred { background: var(--inferred); }
+.dot-approx { background: transparent; border: 1.5px dashed var(--text-secondary); }
+
+/* ---- hover label (globe.gl renders this into its own tooltip div) ----- */
+.tip {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+  color: var(--text-secondary);
+  max-width: 240px;
+}
+.tip strong { display: block; font-size: 14px; color: var(--text-primary); }
+.tip .n { color: var(--text-primary); font-weight: 600; }
+
+/* ---- hub labels on the globe (HTML, positioned by globe.gl) ----------- */
+.hub-label {
+  /* globe.gl centres the element on the point; lift the text above the bar. */
+  transform: translateY(-120%);
+  font: 600 12px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: rgba(236, 241, 248, 0.94);
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  text-shadow: 0 0 3px #05070b, 0 0 6px #05070b, 0 1px 2px #000;
+  transition: opacity 0.2s;
+}
+.hub-label:hover, .hub-label:focus-visible { color: var(--accent); outline: none; }
+.hub-label.behind { opacity: 0; pointer-events: none; }
+
+/* ---- job panel ------------------------------------------------------- */
+.panel {
+  top: var(--gutter);
+  right: var(--gutter);
+  bottom: var(--gutter);
+  width: min(400px, calc(100vw - 2 * var(--gutter)));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slide-in 0.28s ease-out;
+}
+.panel[hidden] { display: none; }
+@keyframes slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-head h2 { margin: 0; font-size: 20px; font-weight: 650; }
+.panel-head p { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+.close {
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.close:hover, .close:focus-visible { color: var(--text-primary); border-color: var(--accent); outline: none; }
+
+.jobs {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.job {
+  padding: 12px 10px;
+  border-radius: 10px;
+}
+.job + .job { border-top: 1px solid var(--border); }
+.job:hover { background: var(--surface-raised); }
+.job-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.job-title a { color: inherit; text-decoration: none; }
+.job-title a:hover { color: var(--accent); text-decoration: underline; }
+.job-meta {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+.job-meta .company { color: var(--text-primary); font-weight: 500; }
+.sep { color: var(--text-muted); }
+.badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.badge-inferred { color: #f0916b; }
+.hiring { margin: 6px 0 0; font-size: 12px; color: var(--text-muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.chip {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(57, 135, 229, 0.12);
+  color: #b9d6fb;
+}
+.chip-more { background: var(--surface-raised); color: var(--text-muted); }
+.no-stack { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* ---- status ---------------------------------------------------------- */
+.status {
+  left: 50%;
+  bottom: var(--gutter);
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.status[hidden] { display: none; }
+.status code { color: var(--text-primary); }
+
+/* ---- small screens: panel becomes a bottom sheet --------------------- */
+@media (max-width: 720px) {
+  .hud { padding: 14px 16px; right: var(--gutter); max-width: none; }
+  .hud h1 { font-size: 18px; }
+  .sub { display: none; }
+  .stats { grid-template-columns: repeat(4, 1fr); gap: 4px 10px; margin-bottom: 10px; }
+  .stats dd { font-size: 17px; }
+  .stats dt { font-size: 10px; }
+  .legend { display: none; }
+  body.panel-open .top { display: none; }
+  .panel {
+    top: auto;
+    left: var(--gutter);
+    width: auto;
+    height: 62vh;
+    animation-name: slide-up;
+  }
+  @keyframes slide-up {
+    from { transform: translateY(24px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { animation: none; }
+}
