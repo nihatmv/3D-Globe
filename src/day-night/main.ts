@@ -144,6 +144,57 @@ function glowSprite(): Sprite {
   return sprite;
 }
 
+// The sun, drawn in space along the true sunlight direction. Real scale
+// (~23,000 Earth radii away, 0.5° wide) would be a speck, so it sits at a
+// fixed distance and a fixed on-screen size. A bright core plus a wide soft
+// halo, both additive; the Earth still hides it when it's behind the planet.
+const SUN_DISTANCE = 8000; // globe radius is 100; the sky sphere is 50,000
+
+function radialSprite(stops: [number, string][], scale: number): Sprite {
+  const size = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d")!;
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (const [at, color] of stops) grad.addColorStop(at, color);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  const sprite = new Sprite(
+    new SpriteMaterial({
+      map: new CanvasTexture(c),
+      blending: AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+      sizeAttenuation: false,
+    }),
+  );
+  sprite.scale.set(scale, scale, 1);
+  return sprite;
+}
+
+function sunSprites(): Sprite[] {
+  const core = radialSprite(
+    [
+      [0, "rgba(255,255,250,1)"],
+      [0.32, "rgba(255,250,225,1)"],
+      [0.42, "rgba(255,214,130,0.85)"],
+      [0.62, "rgba(255,170,70,0.25)"],
+      [1, "rgba(255,150,50,0)"],
+    ],
+    0.09,
+  );
+  const halo = radialSprite(
+    [
+      [0, "rgba(255,220,150,0.35)"],
+      [0.2, "rgba(255,190,110,0.14)"],
+      [0.5, "rgba(255,160,80,0.04)"],
+      [1, "rgba(255,150,70,0)"],
+    ],
+    0.6,
+  );
+  return [halo, core];
+}
+
 // ---- page ----------------------------------------------------------------
 
 interface Marker {
@@ -221,6 +272,9 @@ async function main(): Promise<void> {
     .htmlElementVisibilityModifier(() => {}); // decided by updateMarkerVisibility()
 
   globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+
+  const sun = sunSprites();
+  for (const sprite of sun) globe.scene().add(sprite);
   const maxAniso = globe.renderer().capabilities.getMaxAnisotropy();
   dayTexture.anisotropy = nightTexture.anisotropy = Math.min(4, maxAniso);
 
@@ -256,7 +310,8 @@ async function main(): Promise<void> {
   function updateSun(t: number) {
     const s = subsolarPoint(new Date(t));
     const c = globe.getCoords(s.lat, s.lng, 0);
-    (material.uniforms.sunDirection.value as Vector3).set(c.x, c.y, c.z).normalize();
+    const dir = (material.uniforms.sunDirection.value as Vector3).set(c.x, c.y, c.z).normalize();
+    for (const sprite of sun) sprite.position.copy(dir).multiplyScalar(SUN_DISTANCE);
     markers[0].lat = s.lat;
     markers[0].lng = s.lng;
   }
